@@ -71,7 +71,7 @@ Place the integration in your HA config directory as:
       __init__.py
       manifest.json
       const.py
-      api.py              # or api_client.py if you adjusted imports
+      api.py
       coordinator.py
       sensor.py
       config_flow.py
