@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# custom_components/iotopen/api_client.py
+# custom_components/iotopen/api.py
 
 """Async API client for IoT Open Lynx."""
 
@@ -68,7 +68,7 @@ class IoTOpenApiClient:
         self,
         installation_id: int,
     ) -> List[Mapping[str, Any]]:
-        """List FunctionX objects for an installation. :contentReference[oaicite:5]{index=5}"""
+        """List FunctionX objects for an installation."""
         path = PATH_FUNCTIONX_LIST.format(installation_id=installation_id)
         data = await self._async_request_json("GET", path)
         if not isinstance(data, list):
@@ -80,7 +80,7 @@ class IoTOpenApiClient:
         installation_id: int,
         function_id: int,
     ) -> Mapping[str, Any]:
-        """Get a single FunctionX object. :contentReference[oaicite:6]{index=6}"""
+        """Get a single FunctionX object."""
         path = PATH_FUNCTIONX_ITEM.format(
             installation_id=installation_id,
             functionx_id=function_id,
@@ -98,7 +98,7 @@ class IoTOpenApiClient:
         meta: Mapping[str, Any],
         silent: bool | None = None,
     ) -> Mapping[str, Any]:
-        """Create a FunctionX object. :contentReference[oaicite:7]{index=7}"""
+        """Create a FunctionX object."""
         path = PATH_FUNCTIONX_LIST.format(installation_id=installation_id)
         body = {
             "installation_id": installation_id,
@@ -122,7 +122,7 @@ class IoTOpenApiClient:
         meta: Mapping[str, Any],
         silent: bool | None = None,
     ) -> Mapping[str, Any]:
-        """Update a FunctionX object (full update, ModelXNoID). :contentReference[oaicite:8]{index=8}"""
+        """Update a FunctionX object (full update)."""
         path = PATH_FUNCTIONX_ITEM.format(
             installation_id=installation_id,
             functionx_id=function_id,
@@ -147,7 +147,7 @@ class IoTOpenApiClient:
         *,
         silent: bool | None = None,
     ) -> None:
-        """Delete a FunctionX object. :contentReference[oaicite:9]{index=9}"""
+        """Delete a FunctionX object."""
         path = PATH_FUNCTIONX_ITEM.format(
             installation_id=installation_id,
             functionx_id=function_id,
@@ -167,7 +167,7 @@ class IoTOpenApiClient:
         protected: bool = False,
         silent: bool | None = None,
     ) -> Mapping[str, Any]:
-        """Upsert a meta key for a FunctionX using the meta API. :contentReference[oaicite:10]{index=10}"""
+        """Upsert a meta key for a FunctionX using the meta API."""
         path = PATH_FUNCTIONX_META.format(
             installation_id=installation_id,
             functionx_id=function_id,
@@ -180,7 +180,6 @@ class IoTOpenApiClient:
             "value": str(value),
             "protected": bool(protected),
         }
-        # Use PUT semantics as an upsert (common REST pattern).
         data = await self._async_request_json("PUT", path, params=params, json=body)
         if not isinstance(data, Mapping):
             raise IoTOpenApiError("Unexpected FunctionX meta response type")
@@ -194,7 +193,7 @@ class IoTOpenApiClient:
         self,
         installation_id: int,
     ) -> List[Mapping[str, Any]]:
-        """List DeviceX objects for an installation. :contentReference[oaicite:11]{index=11}"""
+        """List DeviceX objects for an installation."""
         path = PATH_DEVICEX_LIST.format(installation_id=installation_id)
         data = await self._async_request_json("GET", path)
         if not isinstance(data, list):
@@ -206,7 +205,7 @@ class IoTOpenApiClient:
         installation_id: int,
         device_id: int,
     ) -> Mapping[str, Any]:
-        """Get a single DeviceX object. :contentReference[oaicite:12]{index=12}"""
+        """Get a single DeviceX object."""
         path = PATH_DEVICEX_ITEM.format(
             installation_id=installation_id,
             devicex_id=device_id,
@@ -224,7 +223,7 @@ class IoTOpenApiClient:
         meta: Mapping[str, Any],
         silent: bool | None = None,
     ) -> Mapping[str, Any]:
-        """Create a DeviceX object. :contentReference[oaicite:13]{index=13}"""
+        """Create a DeviceX object."""
         path = PATH_DEVICEX_LIST.format(installation_id=installation_id)
         body = {
             "installation_id": installation_id,
@@ -246,7 +245,7 @@ class IoTOpenApiClient:
         *,
         silent: bool | None = None,
     ) -> None:
-        """Delete a DeviceX object. :contentReference[oaicite:14]{index=14}"""
+        """Delete a DeviceX object."""
         path = PATH_DEVICEX_ITEM.format(
             installation_id=installation_id,
             devicex_id=device_id,
@@ -266,7 +265,7 @@ class IoTOpenApiClient:
         protected: bool = False,
         silent: bool | None = None,
     ) -> Mapping[str, Any]:
-        """Upsert a meta key for a DeviceX using the meta API. :contentReference[oaicite:15]{index=15}"""
+        """Upsert a meta key for a DeviceX using the meta API."""
         path = PATH_DEVICEX_META.format(
             installation_id=installation_id,
             devicex_id=device_id,
@@ -293,10 +292,7 @@ class IoTOpenApiClient:
         installation_id: int,
         topics: List[str],
     ) -> List[Mapping[str, Any]]:
-        """Return status samples for given MQTT topics.
-
-        GET /api/v2/status/{installation_id}?topics=... :contentReference[oaicite:16]{index=16}
-        """
+        """Return status samples for given MQTT topics."""
         if not topics:
             return []
 

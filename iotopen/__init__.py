@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: MIT
 # custom_components/iotopen/__init__.py
-
-"""The IoT Open integration."""
+#
+# The IoT Open integration.
+#
+# - Creates an IoTOpenApiClient + IoTOpenDataUpdateCoordinator per config entry
+# - Optionally creates an internal MQTT client (IoTOpenMqttClient) per entry
+# - Exposes services to manage DeviceX / FunctionX and their metadata
 
 from __future__ import annotations
 
@@ -31,8 +35,15 @@ from .const import (
     SERVICE_ASSIGN_FUNCTION_DEVICE,
     SERVICE_SET_DEVICE_META,
     SERVICE_SET_FUNCTION_META,
+    CONF_MQTT_HOST,
+    CONF_MQTT_PORT,
+    CONF_MQTT_USERNAME,
+    CONF_MQTT_PASSWORD,
+    CONF_MQTT_TLS,
+    DEFAULT_MQTT_PORT,
 )
 from .coordinator import IoTOpenDataUpdateCoordinator
+from .mqtt_client import IoTOpenMqttClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,10 +76,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.exception("Unexpected error setting up IoT Open entry")
         raise ConfigEntryNotReady(f"Unexpected error: {err}") from err
 
+    # Optional internal MQTT client (our own, not HA's MQTT integration)
+    mqtt_client: Optional[IoTOpenMqttClient] = None
+    mqtt_host = entry.data.get(CONF_MQTT_HOST)
+    if mqtt_host:
+        mqtt_client = IoTOpenMqttClient(
+            host=mqtt_host,
+            port=int(entry.data.get(CONF_MQTT_PORT, DEFAULT_MQTT_PORT)),
+            username=entry.data.get(CONF_MQTT_USERNAME) or None,
+            password=entry.data.get(CONF_MQTT_PASSWORD) or None,
+            tls=bool(entry.data.get(CONF_MQTT_TLS, False)),
+        )
+        _LOGGER.info(
+            "IoT Open: internal MQTT client configured for host %s:%s (tls=%s)",
+            mqtt_host,
+            entry.data.get(CONF_MQTT_PORT, DEFAULT_MQTT_PORT),
+            entry.data.get(CONF_MQTT_TLS, False),
+        )
+    else:
+        _LOGGER.info(
+            "IoT Open: MQTT host not configured; switches will be read-only"
+        )
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "api": api,
         "coordinator": coordinator,
+        "mqtt": mqtt_client,
     }
 
     _ensure_services_registered(hass)
@@ -82,9 +116,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-        if not hass.data[DOMAIN]:
-            hass.data.pop(DOMAIN)
+        domain_entries = hass.data.get(DOMAIN, {})
+        domain_entries.pop(entry.entry_id, None)
+        if not domain_entries:
+            hass.data.pop(DOMAIN, None)
 
     return unload_ok
 
@@ -174,7 +209,7 @@ def _ensure_services_registered(hass: HomeAssistant) -> None:
         }
     )
 
-    # NEW: generic metadata services (DeviceX / FunctionX)
+    # Generic metadata services (DeviceX / FunctionX)
     set_device_meta_schema = vol.Schema(
         {
             vol.Optional("installation_id"): cv.positive_int,
@@ -310,7 +345,7 @@ def _ensure_services_registered(hass: HomeAssistant) -> None:
             installation_id if installation_id is not None else coordinator.installation_id
         )
 
-        # Store the relation as meta.device_id on the FunctionX via the meta API. :contentReference[oaicite:4]{index=4}
+        # Store the relation as meta.device_id on the FunctionX via the meta API.
         await api.async_set_function_meta(
             installation_id=effective_installation,
             function_id=data["function_id"],
@@ -328,7 +363,6 @@ def _ensure_services_registered(hass: HomeAssistant) -> None:
 
         await coordinator.async_request_refresh()
 
-    # NEW: set_device_meta
     async def async_handle_set_device_meta(call: ServiceCall) -> None:
         data = set_device_meta_schema(call.data)
         installation_id = data.get("installation_id")
@@ -354,7 +388,6 @@ def _ensure_services_registered(hass: HomeAssistant) -> None:
             effective_installation,
         )
 
-    # NEW: set_function_meta
     async def async_handle_set_function_meta(call: ServiceCall) -> None:
         data = set_function_meta_schema(call.data)
         installation_id = data.get("installation_id")

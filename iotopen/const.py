@@ -15,27 +15,37 @@ CONF_INSTALLATION_ID: Final = "installation_id"
 
 DEFAULT_BASE_URL: Final = "https://lynx.iotopen.se"
 
-PLATFORMS: Final = ["sensor"]
+# MQTT connection details (for the internal client, *not* HA's MQTT integration)
+CONF_MQTT_HOST: Final = "mqtt_host"
+CONF_MQTT_PORT: Final = "mqtt_port"
+CONF_MQTT_USERNAME: Final = "mqtt_username"
+CONF_MQTT_PASSWORD: Final = "mqtt_password"
+CONF_MQTT_TLS: Final = "mqtt_tls"
+
+DEFAULT_MQTT_PORT: Final = 1883
+
+# We now have sensors, binary_sensors and switches.
+PLATFORMS: Final = ["sensor", "binary_sensor", "switch"]
 
 # ---------------------------------------------------------------------------
 # API endpoints (REST v2) – paths only, base URL is configurable.
 # ---------------------------------------------------------------------------
 
-# FunctionX (logical functions / signals) :contentReference[oaicite:1]{index=1}
+# FunctionX (logical functions / signals)
 PATH_FUNCTIONX_LIST: Final = "/api/v2/functionx/{installation_id}"
 PATH_FUNCTIONX_ITEM: Final = "/api/v2/functionx/{installation_id}/{functionx_id}"
 PATH_FUNCTIONX_META: Final = (
     "/api/v2/functionx/{installation_id}/{functionx_id}/meta/{meta_key}"
 )
 
-# DeviceX (physical devices) :contentReference[oaicite:2]{index=2}
+# DeviceX (physical devices)
 PATH_DEVICEX_LIST: Final = "/api/v2/devicex/{installation_id}"
 PATH_DEVICEX_ITEM: Final = "/api/v2/devicex/{installation_id}/{devicex_id}"
 PATH_DEVICEX_META: Final = (
     "/api/v2/devicex/{installation_id}/{devicex_id}/meta/{meta_key}"
 )
 
-# Status (last values per topic) :contentReference[oaicite:3]{index=3}
+# Status (last values per topic)
 PATH_STATUS: Final = "/api/v2/status/{installation_id}"
 
 # Update interval in seconds
@@ -51,6 +61,6 @@ SERVICE_CREATE_FUNCTION: Final = "create_function"
 SERVICE_DELETE_FUNCTION: Final = "delete_function"
 SERVICE_ASSIGN_FUNCTION_DEVICE: Final = "assign_function_device"
 
-# NEW: generic metadata management services
+# Generic metadata management services
 SERVICE_SET_DEVICE_META: Final = "set_device_meta"
 SERVICE_SET_FUNCTION_META: Final = "set_function_meta"

@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class IoTOpenFunctionState:
-    """Flattened function + last value.
+    """Flattened function + last value + metadata.
 
     We also keep an optional device_id (from meta.device_id) so that
     entities can be grouped under their physical DeviceX in HA.
@@ -39,6 +39,50 @@ class IoTOpenFunctionState:
     last_value: Any | None
     last_timestamp: int | None
     device_id: Optional[int] = None
+    meta: Mapping[str, Any] = None  # original meta from FunctionX
+
+
+def is_binary_function(state: IoTOpenFunctionState) -> bool:
+    """Decide if a FunctionX should be represented as a binary_sensor.
+
+    Heuristics:
+      - type starts with 'alarm_'
+      - OR meta contains both 'state_alarm' and 'state_no_alarm'
+    """
+    t = state.type.lower()
+    meta = state.meta or {}
+
+    # Switch-like types are handled by the switch platform instead.
+    if "switch" in t:
+        return False
+
+    if t.startswith("alarm_"):
+        return True
+
+    if "state_alarm" in meta and "state_no_alarm" in meta:
+        return True
+
+    return False
+
+
+def is_switch_function(state: IoTOpenFunctionState) -> bool:
+    """Decide if a FunctionX should be represented as a switch.
+
+    Heuristics are deliberately generic and meta-driven:
+
+      - type exactly 'switch' or endswith '_switch'
+      - OR meta contains 'topic_write' (we can send commands)
+    """
+    t = state.type.lower()
+    meta = state.meta or {}
+
+    if t == "switch" or t.endswith("_switch"):
+        return True
+
+    if "topic_write" in meta:
+        return True
+
+    return False
 
 
 class IoTOpenDataUpdateCoordinator(
@@ -121,10 +165,9 @@ class IoTOpenDataUpdateCoordinator(
             meta = func.get("meta") or {}
             status = status_by_topic.get(topic)
 
-            device_id: Optional[int]
             raw_dev_id = meta.get("device_id")
             if raw_dev_id is None:
-                device_id = None
+                device_id: Optional[int] = None
             else:
                 try:
                     device_id = int(raw_dev_id)
@@ -143,6 +186,7 @@ class IoTOpenDataUpdateCoordinator(
                 last_timestamp=None if status is None else status.get(
                     "timestamp"),
                 device_id=device_id,
+                meta=meta,
             )
 
         _LOGGER.debug(

@@ -8,7 +8,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 import logging
-
 import voluptuous as vol
 
 from aiohttp import ClientSession
@@ -25,6 +24,12 @@ from .const import (
     CONF_API_KEY,
     CONF_INSTALLATION_ID,
     DEFAULT_BASE_URL,
+    CONF_MQTT_HOST,
+    CONF_MQTT_PORT,
+    CONF_MQTT_USERNAME,
+    CONF_MQTT_PASSWORD,
+    CONF_MQTT_TLS,
+    DEFAULT_MQTT_PORT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,14 +39,17 @@ async def _async_validate_input(
     hass: HomeAssistant,
     data: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Validate user input by issuing a small API call."""
+    """Validate user input by issuing a small API call (HTTP only)."""
     base_url: str = data[CONF_BASE_URL]
     api_key: str = data[CONF_API_KEY]
     installation_id = int(data[CONF_INSTALLATION_ID])
 
     session: ClientSession = aiohttp_client.async_get_clientsession(hass)
     client = IoTOpenApiClient(
-        base_url=base_url, api_key=api_key, session=session)
+        base_url=base_url,
+        api_key=api_key,
+        session=session,
+    )
 
     try:
         functions = await client.async_list_functionx(installation_id=installation_id)
@@ -88,7 +96,8 @@ class IoTOpenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "cannot_connect"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception(
-                    "Unexpected error validating IoT Open config")
+                    "Unexpected error validating IoT Open config"
+                )
                 errors["base"] = "unknown"
             else:
                 return self.async_create_entry(
@@ -101,6 +110,12 @@ class IoTOpenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_BASE_URL, default=DEFAULT_BASE_URL): str,
                 vol.Required(CONF_API_KEY): str,
                 vol.Required(CONF_INSTALLATION_ID): int,
+                # MQTT connection (optional, for switch control)
+                vol.Optional(CONF_MQTT_HOST): str,
+                vol.Optional(CONF_MQTT_PORT, default=DEFAULT_MQTT_PORT): int,
+                vol.Optional(CONF_MQTT_USERNAME): str,
+                vol.Optional(CONF_MQTT_PASSWORD): str,
+                vol.Optional(CONF_MQTT_TLS, default=False): bool,
             }
         )
 
@@ -135,7 +150,8 @@ class IoTOpenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 if entry:
                     self.hass.config_entries.async_update_entry(
-                        entry, data=new_data)
+                        entry, data=new_data
+                    )
                     await self.hass.config_entries.async_reload(entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
