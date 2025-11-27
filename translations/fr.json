@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "IoT Open",
+        "description": "Connectez Home Assistant à votre installation IoT Open à l'aide d'une clé API.",
+        "data": {
+          "base_url": "URL de base",
+          "api_key": "Clé API",
+          "installation_id": "ID d'installation"
+        }
+      },
+      "reauth_user": {
+        "title": "Ré-authentifier IoT Open",
+        "description": "Vos identifiants IoT Open ne sont plus valides. Veuillez saisir une nouvelle clé API.",
+        "data": {
+          "api_key": "Clé API"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion à IoT Open. Vérifiez l'URL et le réseau.",
+      "invalid_auth": "Clé API invalide.",
+      "unknown": "Erreur inattendue."
+    },
+    "abort": {
+      "already_configured": "Cette installation IoT Open est déjà configurée.",
+      "reauth_successful": "Ré-authentification réussie."
+    }
+  }
+}

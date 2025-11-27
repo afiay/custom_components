@@ -1,0 +1,14 @@
+{
+  "domain": "iotopen",
+  "name": "IoT Open",
+  "version": "0.2.0",
+  "documentation": "https://lynx.iotopen.se/tech/docs/platform/api/",
+  "issue_tracker": "https://forum.iotopen.se/",
+  "requirements": [],
+  "codeowners": ["@iotopen"],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "integration_type": "service",
+  "single_config_entry": true,
+  "loggers": ["custom_components.iotopen"]
+}

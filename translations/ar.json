@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "IoT Open",
+        "description": "اربط Home Assistant بمنصّة IoT Open الخاصة بك باستخدام مفتاح API.",
+        "data": {
+          "base_url": "عنوان الأساس (Base URL)",
+          "api_key": "مفتاح الـ API",
+          "installation_id": "معرّف التثبيت"
+        }
+      },
+      "reauth_user": {
+        "title": "إعادة المصادقة على IoT Open",
+        "description": "بيانات اعتماد IoT Open لم تعد صالحة. يرجى إدخال مفتاح API جديد.",
+        "data": {
+          "api_key": "مفتاح الـ API"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "فشل الاتصال بـ IoT Open. تحقّق من عنوان الـ URL والشبكة.",
+      "invalid_auth": "مفتاح API غير صالح.",
+      "unknown": "خطأ غير متوقع."
+    },
+    "abort": {
+      "already_configured": "تم إعداد هذه بيئة IoT Open مسبقًا.",
+      "reauth_successful": "تمت إعادة المصادقة بنجاح."
+    }
+  }
+}

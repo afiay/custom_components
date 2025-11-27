@@ -1,0 +1,270 @@
+create_device:
+  name: Create DeviceX
+  description: Create a new IoT Open DeviceX object in an installation.
+  fields:
+    installation_id:
+      name: Installation ID
+      description: >
+        Optional. Defaults to the installation configured for the first IoT Open entry if omitted.
+      example: 42
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    type:
+      name: Device type
+      description: >
+        The DeviceX type (for example "knx", "modbus", "sensorhub", ...).
+      example: "knx"
+      required: true
+      selector:
+        text:
+    name:
+      name: Name
+      description: >
+        Human-readable name stored as metadata (meta.name).
+      example: "Livingroom KNX device"
+      required: true
+      selector:
+        text:
+    meta:
+      name: Additional metadata
+      description: >
+        Arbitrary metadata keys/values to store on the device (e.g. manufacturer, model).
+      required: false
+      selector:
+        object:
+
+delete_device:
+  name: Delete DeviceX
+  description: Delete an IoT Open DeviceX object.
+  fields:
+    installation_id:
+      name: Installation ID
+      description: Optional. Defaults to the first configured IoT Open installation.
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    device_id:
+      name: Device ID
+      description: The DeviceX id to delete.
+      example: 10
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+
+create_function:
+  name: Create FunctionX
+  description: >
+    Create a new IoT Open FunctionX object and optionally link it to a DeviceX via meta.device_id.
+  fields:
+    installation_id:
+      name: Installation ID
+      description: Optional. Defaults to the first configured IoT Open installation.
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    type:
+      name: Function type
+      description: >
+        FunctionX type (for example "temperature", "humidity", "switch", ...).
+      example: "temperature"
+      required: true
+      selector:
+        text:
+    name:
+      name: Name
+      description: Human-readable name stored as metadata (meta.name).
+      example: "Livingroom temperature"
+      required: true
+      selector:
+        text:
+    topic_read:
+      name: Topic (read)
+      description: >
+        MQTT topic for reading values (stored as meta.topic_read).
+      example: "100/obj/knx/0/2/4"
+      required: true
+      selector:
+        text:
+    device_id:
+      name: Device ID
+      description: >
+        Optional DeviceX id to attach this FunctionX to (stored as meta.device_id).
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    meta:
+      name: Additional metadata
+      description: >
+        Arbitrary metadata keys/values to store on the function (e.g. unit, format, icon).
+      required: false
+      selector:
+        object:
+
+delete_function:
+  name: Delete FunctionX
+  description: Delete an IoT Open FunctionX object.
+  fields:
+    installation_id:
+      name: Installation ID
+      description: Optional. Defaults to the first configured IoT Open installation.
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    function_id:
+      name: Function ID
+      description: The FunctionX id to delete.
+      example: 123
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+
+assign_function_device:
+  name: Assign FunctionX to DeviceX
+  description: >
+    Link an existing FunctionX to a DeviceX by setting meta.device_id on the function.
+  fields:
+    installation_id:
+      name: Installation ID
+      description: Optional. Defaults to the first configured IoT Open installation.
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    function_id:
+      name: Function ID
+      description: FunctionX id to update.
+      example: 123
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    device_id:
+      name: Device ID
+      description: DeviceX id to attach to (stored in meta.device_id).
+      example: 10
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+
+set_device_meta:
+  name: Set DeviceX metadata
+  description: >
+    Upsert a metadata key on an IoT Open DeviceX using the metadata API.
+  fields:
+    installation_id:
+      name: Installation ID
+      description: Optional. Defaults to the first configured IoT Open installation.
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    device_id:
+      name: Device ID
+      description: DeviceX id to update.
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    meta_key:
+      name: Meta key
+      description: >
+        Metadata key to set (for example "name", "description", "public", "icon").
+      example: "name"
+      required: true
+      selector:
+        text:
+    value:
+      name: Value
+      description: Value to store (will be stringified).
+      example: "My device name"
+      required: true
+      selector:
+        text:
+    protected:
+      name: Protected
+      description: >
+        Set to true to store the meta key as protected (cannot be changed from some UIs).
+      required: false
+      default: false
+      selector:
+        boolean:
+    silent:
+      name: Silent
+      description: >
+        Optional. If supported by the API, avoid triggering extra notifications/events.
+      required: false
+      selector:
+        boolean:
+
+set_function_meta:
+  name: Set FunctionX metadata
+  description: >
+    Upsert a metadata key on an IoT Open FunctionX using the metadata API.
+  fields:
+    installation_id:
+      name: Installation ID
+      description: Optional. Defaults to the first configured IoT Open installation.
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    function_id:
+      name: Function ID
+      description: FunctionX id to update.
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    meta_key:
+      name: Meta key
+      description: >
+        Metadata key to set (for example "name", "unit", "public", "device_id", "icon").
+      example: "unit"
+      required: true
+      selector:
+        text:
+    value:
+      name: Value
+      description: Value to store (will be stringified).
+      example: "°C"
+      required: true
+      selector:
+        text:
+    protected:
+      name: Protected
+      description: >
+        Set to true to store the meta key as protected (cannot be changed from some UIs).
+      required: false
+      default: false
+      selector:
+        boolean:
+    silent:
+      name: Silent
+      description: >
+        Optional. If supported by the API, avoid triggering extra notifications/events.
+      required: false
+      selector:
+        boolean:

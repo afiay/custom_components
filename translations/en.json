@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "IoT Open",
+        "description": "Connect Home Assistant to your IoT Open installation using an API key.",
+        "data": {
+          "base_url": "Base URL",
+          "api_key": "API key",
+          "installation_id": "Installation ID"
+        }
+      },
+      "reauth_user": {
+        "title": "Reauthenticate IoT Open",
+        "description": "Your IoT Open credentials are no longer valid. Please enter a new API key.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to IoT Open. Check URL and network.",
+      "invalid_auth": "Invalid API key.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This IoT Open installation is already configured.",
+      "reauth_successful": "Reauthentication successful."
+    }
+  }
+}

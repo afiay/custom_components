@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "IoT Open",
+        "description": "Anslut Home Assistant till din IoT Open-installation med en API-nyckel.",
+        "data": {
+          "base_url": "Bas-URL",
+          "api_key": "API-nyckel",
+          "installation_id": "Installations-ID"
+        }
+      },
+      "reauth_user": {
+        "title": "Autentisera IoT Open på nytt",
+        "description": "Dina IoT Open-uppgifter är inte längre giltiga. Ange en ny API-nyckel.",
+        "data": {
+          "api_key": "API-nyckel"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kunde inte ansluta till IoT Open. Kontrollera URL och nätverk.",
+      "invalid_auth": "Ogiltig API-nyckel.",
+      "unknown": "Oväntat fel."
+    },
+    "abort": {
+      "already_configured": "Den här IoT Open-installationen är redan konfigurerad.",
+      "reauth_successful": "Omautentisering lyckades."
+    }
+  }
+}
