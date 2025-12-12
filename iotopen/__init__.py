@@ -48,8 +48,6 @@ from .mqtt_client import IoTOpenMqttClient
 
 _LOGGER = logging.getLogger(__name__)
 
-# Key used inside hass.data[DOMAIN] to remember we have registered
-# our services and stop-listener exactly once.
 KEY_SERVICES_REGISTERED = "_services_registered"
 KEY_STOP_LISTENER_REGISTERED = "_stop_listener_registered"
 
