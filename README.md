@@ -61,6 +61,22 @@ Entities are grouped as follows:
 
 ## Installation
 
+```bash
+mkdir -p ~/homeassistant/config
+docker run -d \
+  --name homeassistant \
+  --privileged \
+  --restart=unless-stopped \
+  -e TZ=Europe/Stockholm \
+  -v ~/homeassistant/config:/config \
+  -p 8123:8123 \
+  ghcr.io/home-assistant/home-assistant:stable \
+  /bin/bash -c "
+    cd /config &&
+    git clone https://github.com/afiay/custom_components || true &&
+    exec /init
+  "
+```
 ### File layout
 
 Place the integration in your Home Assistant config directory:
