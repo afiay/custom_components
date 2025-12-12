@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "documentation": "https://lynx.iotopen.se/tech/docs/platform/api/",
   "issue_tracker": "https://forum.iotopen.se/",
-  "requirements": ["asyncio-mqtt==0.16.0"],
+  "requirements": ["paho-mqtt>=2.0.0,<3.0.0"],
   "codeowners": ["@iotopen"],
   "config_flow": true,
   "iot_class": "cloud_polling",

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # custom_components/iotopen/const.py
 
 """Constants for the IoT Open integration."""

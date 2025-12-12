@@ -1,6 +1,8 @@
 create_device:
   name: Create DeviceX
-  description: Create a new IoT Open DeviceX object in an installation.
+  description: >
+    Create a new IoT Open DeviceX object in Lynx for an installation.
+    This is persisted in IoT Open (Lynx), not only in Home Assistant.
   fields:
     installation_id:
       name: Installation ID
@@ -15,7 +17,7 @@ create_device:
     type:
       name: Device type
       description: >
-        The DeviceX type (for example "knx", "modbus", "sensorhub", ...).
+        The DeviceX type (for example "knx", "modbus", "sensorhub", "zwave", ...).
       example: "knx"
       required: true
       selector:
@@ -23,7 +25,7 @@ create_device:
     name:
       name: Name
       description: >
-        Human-readable name stored as metadata (meta.name).
+        Human-readable name stored as metadata (meta.name) in IoT Open.
       example: "Livingroom KNX device"
       required: true
       selector:
@@ -32,17 +34,21 @@ create_device:
       name: Additional metadata
       description: >
         Arbitrary metadata keys/values to store on the device (e.g. manufacturer, model).
+        Values are written to IoT Open DeviceX meta. Example:
+          {"manufacturer": "Acme", "model": "XYZ-100"}
       required: false
       selector:
         object:
 
 delete_device:
   name: Delete DeviceX
-  description: Delete an IoT Open DeviceX object.
+  description: >
+    Delete an IoT Open DeviceX object from Lynx. This permanently removes the DeviceX from the installation.
   fields:
     installation_id:
       name: Installation ID
-      description: Optional. Defaults to the first configured IoT Open installation.
+      description: >
+        Optional. Defaults to the first configured IoT Open installation.
       required: false
       selector:
         number:
@@ -50,7 +56,8 @@ delete_device:
           mode: box
     device_id:
       name: Device ID
-      description: The DeviceX id to delete.
+      description: >
+        The DeviceX id to delete (as shown in IoT Open / Lynx).
       example: 10
       required: true
       selector:
@@ -61,11 +68,13 @@ delete_device:
 create_function:
   name: Create FunctionX
   description: >
-    Create a new IoT Open FunctionX object and optionally link it to a DeviceX via meta.device_id.
+    Create a new IoT Open FunctionX object in Lynx and optionally link it to a DeviceX via meta.device_id.
+    The new FunctionX is stored in IoT Open and, after a refresh, exposed as a sensor/binary_sensor/switch in Home Assistant.
   fields:
     installation_id:
       name: Installation ID
-      description: Optional. Defaults to the first configured IoT Open installation.
+      description: >
+        Optional. Defaults to the first configured IoT Open installation.
       required: false
       selector:
         number:
@@ -74,14 +83,16 @@ create_function:
     type:
       name: Function type
       description: >
-        FunctionX type (for example "temperature", "humidity", "switch", ...).
+        FunctionX type (for example "temperature", "humidity", "switch", "alarm_power_management", ...).
+        The type + meta are used by the integration to decide whether it becomes a sensor, binary_sensor or switch.
       example: "temperature"
       required: true
       selector:
         text:
     name:
       name: Name
-      description: Human-readable name stored as metadata (meta.name).
+      description: >
+        Human-readable name stored as metadata (meta.name) and used as the entity name in Home Assistant.
       example: "Livingroom temperature"
       required: true
       selector:
@@ -89,7 +100,8 @@ create_function:
     topic_read:
       name: Topic (read)
       description: >
-        MQTT topic for reading values (stored as meta.topic_read).
+        MQTT topic for reading values (stored as meta.topic_read in IoT Open).
+        This is the topic that IoT Open Status uses and that Home Assistant subscribes to via the API.
       example: "100/obj/knx/0/2/4"
       required: true
       selector:
@@ -97,7 +109,8 @@ create_function:
     device_id:
       name: Device ID
       description: >
-        Optional DeviceX id to attach this FunctionX to (stored as meta.device_id).
+        Optional DeviceX id to attach this FunctionX to (stored as meta.device_id in IoT Open).
+        When set, entities in Home Assistant will be grouped under the corresponding DeviceX.
       required: false
       selector:
         number:
@@ -106,18 +119,29 @@ create_function:
     meta:
       name: Additional metadata
       description: >
-        Arbitrary metadata keys/values to store on the function (e.g. unit, format, icon).
+        Arbitrary metadata keys/values to store on the function (e.g. unit, format, icon, topic_write).
+        The following keys are interpreted by the integration:
+          - "unit" / "unit_of_measurement": sensor unit in Home Assistant.
+          - "topic_write": MQTT topic used for writing (switches).
+          - "state_on" / "state_off": numeric payloads for switches.
+          - "state_alarm" / "state_no_alarm": numeric payloads for binary_alarms.
+          - "device_id": string ID of DeviceX (same as the device_id field above).
+          - "ha.disabled" / "ha.hidden": if truthy ("1", "true", "yes", "on"), the function is NOT exposed to Home Assistant.
+        Example:
+          {"unit": "°C", "icon": "mdi:thermometer", "ha.disabled": "false"}
       required: false
       selector:
         object:
 
 delete_function:
   name: Delete FunctionX
-  description: Delete an IoT Open FunctionX object.
+  description: >
+    Delete an IoT Open FunctionX object from Lynx. This removes the FunctionX and its corresponding entity in Home Assistant.
   fields:
     installation_id:
       name: Installation ID
-      description: Optional. Defaults to the first configured IoT Open installation.
+      description: >
+        Optional. Defaults to the first configured IoT Open installation.
       required: false
       selector:
         number:
@@ -125,7 +149,8 @@ delete_function:
           mode: box
     function_id:
       name: Function ID
-      description: The FunctionX id to delete.
+      description: >
+        The FunctionX id to delete (as shown in IoT Open / Lynx).
       example: 123
       required: true
       selector:
@@ -136,11 +161,13 @@ delete_function:
 assign_function_device:
   name: Assign FunctionX to DeviceX
   description: >
-    Link an existing FunctionX to a DeviceX by setting meta.device_id on the function.
+    Link an existing FunctionX to a DeviceX by setting meta.device_id on the function in IoT Open.
+    After the next refresh, the entity will be grouped under the corresponding device in Home Assistant.
   fields:
     installation_id:
       name: Installation ID
-      description: Optional. Defaults to the first configured IoT Open installation.
+      description: >
+        Optional. Defaults to the first configured IoT Open installation.
       required: false
       selector:
         number:
@@ -148,7 +175,8 @@ assign_function_device:
           mode: box
     function_id:
       name: Function ID
-      description: FunctionX id to update.
+      description: >
+        FunctionX id to update.
       example: 123
       required: true
       selector:
@@ -157,7 +185,8 @@ assign_function_device:
           mode: box
     device_id:
       name: Device ID
-      description: DeviceX id to attach to (stored in meta.device_id).
+      description: >
+        DeviceX id to attach to (stored as meta.device_id in IoT Open).
       example: 10
       required: true
       selector:
@@ -169,10 +198,12 @@ set_device_meta:
   name: Set DeviceX metadata
   description: >
     Upsert a metadata key on an IoT Open DeviceX using the metadata API.
+    This directly updates the DeviceX meta object in Lynx.
   fields:
     installation_id:
       name: Installation ID
-      description: Optional. Defaults to the first configured IoT Open installation.
+      description: >
+        Optional. Defaults to the first configured IoT Open installation.
       required: false
       selector:
         number:
@@ -180,7 +211,8 @@ set_device_meta:
           mode: box
     device_id:
       name: Device ID
-      description: DeviceX id to update.
+      description: >
+        DeviceX id to update.
       required: true
       selector:
         number:
@@ -196,7 +228,8 @@ set_device_meta:
         text:
     value:
       name: Value
-      description: Value to store (will be stringified).
+      description: >
+        Value to store (will be stringified before sending to IoT Open).
       example: "My device name"
       required: true
       selector:
@@ -204,7 +237,7 @@ set_device_meta:
     protected:
       name: Protected
       description: >
-        Set to true to store the meta key as protected (cannot be changed from some UIs).
+        Set to true to store the meta key as protected (cannot be changed from some UIs in IoT Open).
       required: false
       default: false
       selector:
@@ -212,7 +245,7 @@ set_device_meta:
     silent:
       name: Silent
       description: >
-        Optional. If supported by the API, avoid triggering extra notifications/events.
+        Optional. If supported by the API, avoid triggering extra notifications/events in IoT Open.
       required: false
       selector:
         boolean:
@@ -221,10 +254,12 @@ set_function_meta:
   name: Set FunctionX metadata
   description: >
     Upsert a metadata key on an IoT Open FunctionX using the metadata API.
+    This updates the FunctionX meta object in Lynx and may affect how it is exposed in Home Assistant.
   fields:
     installation_id:
       name: Installation ID
-      description: Optional. Defaults to the first configured IoT Open installation.
+      description: >
+        Optional. Defaults to the first configured IoT Open installation.
       required: false
       selector:
         number:
@@ -232,7 +267,8 @@ set_function_meta:
           mode: box
     function_id:
       name: Function ID
-      description: FunctionX id to update.
+      description: >
+        FunctionX id to update.
       required: true
       selector:
         number:
@@ -241,14 +277,17 @@ set_function_meta:
     meta_key:
       name: Meta key
       description: >
-        Metadata key to set (for example "name", "unit", "public", "device_id", "icon").
+        Metadata key to set (for example "name", "unit", "public", "device_id", "icon",
+        "topic_write", "state_on", "state_off", "state_alarm", "state_no_alarm", "ha.disabled", "ha.hidden").
       example: "unit"
       required: true
       selector:
         text:
     value:
       name: Value
-      description: Value to store (will be stringified).
+      description: >
+        Value to store (will be stringified).
+        For flags like "ha.disabled" / "ha.hidden" use "true"/"false" or "1"/"0".
       example: "°C"
       required: true
       selector:
@@ -256,7 +295,7 @@ set_function_meta:
     protected:
       name: Protected
       description: >
-        Set to true to store the meta key as protected (cannot be changed from some UIs).
+        Set to true to store the meta key as protected (cannot be changed from some UIs in IoT Open).
       required: false
       default: false
       selector:
@@ -264,7 +303,7 @@ set_function_meta:
     silent:
       name: Silent
       description: >
-        Optional. If supported by the API, avoid triggering extra notifications/events.
+        Optional. If supported by the API, avoid triggering extra notifications/events in IoT Open.
       required: false
       selector:
         boolean:

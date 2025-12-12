@@ -1,7 +1,7 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # custom_components/iotopen/sensor.py
-
-"""Sensor platform for IoT Open."""
+#
+# Sensor platform for IoT Open.
 
 from __future__ import annotations
 
@@ -17,16 +17,16 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import (
     IoTOpenDataUpdateCoordinator,
     IoTOpenFunctionState,
     is_binary_function,
+    is_switch_function,
 )
+from .entity import IoTOpenEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,8 +46,8 @@ async def async_setup_entry(
     entities: list[IoTOpenFunctionSensor] = []
 
     for state in coordinator.data.values():
-        # Binary-style functions are handled by binary_sensor.py
-        if is_binary_function(state):
+        # Binary-style and switch-style functions are handled by other platforms.
+        if is_binary_function(state) or is_switch_function(state):
             continue
 
         entities.append(
@@ -58,16 +58,15 @@ async def async_setup_entry(
             )
         )
 
-    async_add_entities(entities)
+    if entities:
+        _LOGGER.debug("Adding %d IoT Open sensors", len(entities))
+        async_add_entities(entities)
+    else:
+        _LOGGER.debug("No IoT Open sensor-type functions discovered for entry %s", entry.entry_id)
 
 
-class IoTOpenFunctionSensor(
-    CoordinatorEntity[IoTOpenDataUpdateCoordinator],
-    SensorEntity,
-):
-    """Sensor representing one IoT Open FunctionX (non-binary)."""
-
-    _attr_has_entity_name = True
+class IoTOpenFunctionSensor(IoTOpenEntity, SensorEntity):
+    """Sensor representing one IoT Open FunctionX (non-binary / non-switch)."""
 
     def __init__(
         self,
@@ -76,17 +75,15 @@ class IoTOpenFunctionSensor(
         function_id: int,
         entry_id: str,
     ) -> None:
-        super().__init__(coordinator)
-        self._function_id = function_id
-        self._entry_id = entry_id
+        super().__init__(
+            coordinator=coordinator,
+            function_id=function_id,
+            entry_id=entry_id,
+        )
 
         state = self._get_state()
+        # During normal setup this should always exist – assert makes mypy/pylance happy.
         assert state is not None
-
-        self._attr_unique_id = (
-            f"iotopen_{state.installation_id}_func_{state.function_id}"
-        )
-        self._attr_name = state.name
 
         # Guess metadata from type/name/meta
         dev_class, unit, state_class = _guess_sensor_characteristics(state)
@@ -94,16 +91,15 @@ class IoTOpenFunctionSensor(
         self._attr_native_unit_of_measurement = unit
         self._attr_state_class = state_class
 
-    def _get_state(self) -> IoTOpenFunctionState | None:
-        return self.coordinator.data.get(self._function_id)
-
     @property
     def native_value(self) -> Any:
+        """Return the current value from the coordinator."""
         state = self._get_state()
         return None if state is None else state.last_value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes for diagnostics / debugging."""
         state = self._get_state()
         if state is None:
             return {ATTR_ATTRIBUTION: ATTRIBUTION}
@@ -118,37 +114,6 @@ class IoTOpenFunctionSensor(
             "device_id": state.device_id,
         }
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Group functions either under DeviceX or under the installation."""
-        state = self._get_state()
-        if state is None:
-            return DeviceInfo(
-                identifiers={(DOMAIN, "installation_unknown")},
-                name="IoT Open Installation",
-                manufacturer="IoT Open",
-                model="Lynx",
-            )
-
-        if state.device_id is not None:
-            identifier = f"device_{state.device_id}"
-            name = f"IoT Open Device {state.device_id}"
-        else:
-            identifier = f"installation_{state.installation_id}"
-            name = f"IoT Open Installation {state.installation_id}"
-
-        return DeviceInfo(
-            identifiers={(DOMAIN, identifier)},
-            name=name,
-            manufacturer="IoT Open",
-            model="Lynx",
-        )
-
-    @property
-    def available(self) -> bool:
-        """Entity is available if coordinator has state for this function."""
-        return self._get_state() is not None
-
 
 def _guess_sensor_characteristics(
     state: IoTOpenFunctionState,
@@ -157,29 +122,37 @@ def _guess_sensor_characteristics(
     meta = state.meta or {}
     t = state.type.lower()
     name = state.name.lower()
-    unit = str(meta.get("unit") or meta.get(
-        "unit_of_measurement") or "").strip()
+    unit = str(
+        meta.get("unit")
+        or meta.get("unit_of_measurement")
+        or ""
+    ).strip()
 
     dev_class: SensorDeviceClass | None = None
     state_class: SensorStateClass | None = None
 
+    # Very simple heuristics; can be extended later as we see more FunctionX types.
     if "temp" in t or "temp" in name:
         dev_class = SensorDeviceClass.TEMPERATURE
         if not unit:
             unit = "°C"
         state_class = SensorStateClass.MEASUREMENT
+
     elif "humidity" in t or "humidity" in name:
         dev_class = SensorDeviceClass.HUMIDITY
         if not unit:
             unit = "%"
         state_class = SensorStateClass.MEASUREMENT
+
     elif "power" in t or "watt" in unit.lower():
         dev_class = SensorDeviceClass.POWER
         if not unit:
             unit = "W"
         state_class = SensorStateClass.MEASUREMENT
+
     elif "energy" in t or unit.lower() in ("kwh", "wh"):
         dev_class = SensorDeviceClass.ENERGY
+        # Energy counters tend to be monotonic; this matches HA’s expectation.
         state_class = SensorStateClass.TOTAL_INCREASING
 
     if not unit:

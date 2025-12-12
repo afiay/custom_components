@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # custom_components/iotopen/config_flow.py
 
 """Config flow for IoT Open integration."""

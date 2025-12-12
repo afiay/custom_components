@@ -1,7 +1,7 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # custom_components/iotopen/binary_sensor.py
-
-"""Binary sensor platform for IoT Open."""
+#
+# Binary sensor platform for IoT Open.
 
 from __future__ import annotations
 
@@ -15,9 +15,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import (
@@ -25,6 +23,7 @@ from .coordinator import (
     IoTOpenFunctionState,
     is_binary_function,
 )
+from .entity import IoTOpenEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,16 +52,18 @@ async def async_setup_entry(
             )
         )
 
-    async_add_entities(entities)
+    if entities:
+        _LOGGER.debug("Adding %d IoT Open binary_sensors", len(entities))
+        async_add_entities(entities)
+    else:
+        _LOGGER.debug(
+            "No IoT Open binary-sensor-type functions discovered for entry %s",
+            entry.entry_id,
+        )
 
 
-class IoTOpenFunctionBinarySensor(
-    CoordinatorEntity[IoTOpenDataUpdateCoordinator],
-    BinarySensorEntity,
-):
+class IoTOpenFunctionBinarySensor(IoTOpenEntity, BinarySensorEntity):
     """Binary sensor representing an alarm-style FunctionX."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -71,23 +72,22 @@ class IoTOpenFunctionBinarySensor(
         function_id: int,
         entry_id: str,
     ) -> None:
-        super().__init__(coordinator)
-        self._function_id = function_id
-        self._entry_id = entry_id
+        super().__init__(
+            coordinator=coordinator,
+            function_id=function_id,
+            entry_id=entry_id,
+        )
 
         state = self._get_state()
         assert state is not None
 
+        # Slightly more specific unique_id than the base default
         self._attr_unique_id = (
-            f"iotopen_{state.installation_id}_func_{state.function_id}_binary"
+            f"{DOMAIN}_{state.installation_id}_func_{state.function_id}_binary"
         )
-        self._attr_name = state.name
 
         # Treat alarm_* as problem/power alarms by default.
         self._attr_device_class = _guess_device_class(state)
-
-    def _get_state(self) -> IoTOpenFunctionState | None:
-        return self.coordinator.data.get(self._function_id)
 
     @property
     def is_on(self) -> bool:
@@ -115,8 +115,7 @@ class IoTOpenFunctionBinarySensor(
             alarm_int = None
 
         try:
-            no_alarm_int = int(
-                no_alarm_raw) if no_alarm_raw is not None else None
+            no_alarm_int = int(no_alarm_raw) if no_alarm_raw is not None else None
         except (TypeError, ValueError):
             no_alarm_int = None
 
@@ -146,36 +145,6 @@ class IoTOpenFunctionBinarySensor(
             "state_no_alarm": meta.get("state_no_alarm"),
         }
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Group functions either under DeviceX or under the installation."""
-        state = self._get_state()
-        if state is None:
-            return DeviceInfo(
-                identifiers={(DOMAIN, "installation_unknown")},
-                name="IoT Open Installation",
-                manufacturer="IoT Open",
-                model="Lynx",
-            )
-
-        if state.device_id is not None:
-            identifier = f"device_{state.device_id}"
-            name = f"IoT Open Device {state.device_id}"
-        else:
-            identifier = f"installation_{state.installation_id}"
-            name = f"IoT Open Installation {state.installation_id}"
-
-        return DeviceInfo(
-            identifiers={(DOMAIN, identifier)},
-            name=name,
-            manufacturer="IoT Open",
-            model="Lynx",
-        )
-
-    @property
-    def available(self) -> bool:
-        return self._get_state() is not None
-
 
 def _guess_device_class(state: IoTOpenFunctionState) -> BinarySensorDeviceClass | None:
     """Try to map alarm_* to a reasonable binary_sensor device_class."""
@@ -183,7 +152,7 @@ def _guess_device_class(state: IoTOpenFunctionState) -> BinarySensorDeviceClass 
     meta = state.meta or {}
     zw_type = str(meta.get("zwave.type") or "").lower()
 
-    # Your screenshot: type "alarm_power_management", zwave.type "power_management"
+    # Example: type "alarm_power_management", zwave.type "power_management"
     if "power" in t or "power" in zw_type:
         return BinarySensorDeviceClass.POWER
 

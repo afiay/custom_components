@@ -1,13 +1,13 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # custom_components/iotopen/coordinator.py
-
-"""DataUpdateCoordinator for IoT Open."""
+#
+# DataUpdateCoordinator for IoT Open.
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional
 
 import logging
 
@@ -39,7 +39,12 @@ class IoTOpenFunctionState:
     last_value: Any | None
     last_timestamp: int | None
     device_id: Optional[int] = None
-    meta: Mapping[str, Any] = None  # original meta from FunctionX
+    meta: Mapping[str, Any] | None = None  # original meta from FunctionX
+
+
+# ---------------------------------------------------------------------------
+# Heuristics: what becomes a binary_sensor vs a switch vs a "normal" sensor
+# ---------------------------------------------------------------------------
 
 
 def is_binary_function(state: IoTOpenFunctionState) -> bool:
@@ -48,6 +53,7 @@ def is_binary_function(state: IoTOpenFunctionState) -> bool:
     Heuristics:
       - type starts with 'alarm_'
       - OR meta contains both 'state_alarm' and 'state_no_alarm'
+      - BUT any '...switch' types are excluded (handled by switch platform)
     """
     t = state.type.lower()
     meta = state.meta or {}
@@ -85,6 +91,48 @@ def is_switch_function(state: IoTOpenFunctionState) -> bool:
     return False
 
 
+def _parse_device_id(raw: Any) -> Optional[int]:
+    """Best-effort conversion of meta.device_id to an int."""
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def is_exposed_to_ha(meta: Mapping[str, Any] | None) -> bool:
+    """Return True if this FunctionX should be exposed to Home Assistant.
+
+    We use simple, meta-driven flags so integrators can control visibility
+    from Lynx/IoT Open without touching HA:
+
+      - If meta['ha.disabled'] is truthy -> NOT exposed
+      - If meta['ha.hidden'] is truthy   -> NOT exposed
+
+    Any of: "1", "true", "yes", "on" (case-insensitive) are treated as True.
+    """
+    if not meta:
+        return True
+
+    def _truthy(v: Any) -> bool:
+        s = str(v).strip().lower()
+        return s in ("1", "true", "yes", "on")
+
+    if _truthy(meta.get("ha.disabled", "")):
+        return False
+
+    if _truthy(meta.get("ha.hidden", "")):
+        return False
+
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Coordinator
+# ---------------------------------------------------------------------------
+
+
 class IoTOpenDataUpdateCoordinator(
     DataUpdateCoordinator[Dict[int, IoTOpenFunctionState]]
 ):
@@ -109,6 +157,7 @@ class IoTOpenDataUpdateCoordinator(
 
     @property
     def installation_id(self) -> int:
+        """Return the installation id this coordinator is bound to."""
         return self._installation_id
 
     async def _async_update_data(self) -> Dict[int, IoTOpenFunctionState]:
@@ -116,10 +165,14 @@ class IoTOpenDataUpdateCoordinator(
 
         Strategy:
           1. Get FunctionX list for the installation.
-          2. Collect all `topic_read` from function.meta.
-          3. Query Status for those topics.
-          4. Map latest value per topic.
+          2. Filter out functions that are explicitly hidden/disabled for HA.
+          3. Collect all `topic_read` from function.meta.
+          4. Query Status for those topics.
+          5. Map latest value per topic into IoTOpenFunctionState.
         """
+        # ------------------------------------------------------------------
+        # 1. List FunctionX
+        # ------------------------------------------------------------------
         try:
             functionx_raw = await self._api.async_list_functionx(
                 installation_id=self._installation_id
@@ -127,17 +180,42 @@ class IoTOpenDataUpdateCoordinator(
         except IoTOpenApiError as err:
             raise UpdateFailed(f"Failed to fetch FunctionX: {err}") from err
 
-        topics: List[str] = []
+        total_functions = len(functionx_raw)
+        topics: list[str] = []
         function_by_topic: Dict[str, Mapping[str, Any]] = {}
+        skipped_hidden = 0
+        skipped_no_topic = 0
 
         for item in functionx_raw:
             meta = item.get("meta") or {}
+
+            if not is_exposed_to_ha(meta):
+                skipped_hidden += 1
+                continue
+
             topic = meta.get("topic_read")
             if not topic:
+                skipped_no_topic += 1
                 continue
+
             topics.append(topic)
             function_by_topic[topic] = item
 
+        _LOGGER.debug(
+            (
+                "IoT Open coordinator(%s): %d FunctionX total, %d exposed, "
+                "%d hidden/disabled, %d without topic_read"
+            ),
+            self._installation_id,
+            total_functions,
+            len(function_by_topic),
+            skipped_hidden,
+            skipped_no_topic,
+        )
+
+        # ------------------------------------------------------------------
+        # 2. Fetch latest status per topic (if any topics exist)
+        # ------------------------------------------------------------------
         status_by_topic: Dict[str, Mapping[str, Any]] = {}
 
         if topics:
@@ -158,6 +236,20 @@ class IoTOpenDataUpdateCoordinator(
                 if current is None or ts >= current.get("timestamp", 0):
                     status_by_topic[topic] = sample
 
+            _LOGGER.debug(
+                "IoT Open coordinator(%s): received status for %d topics",
+                self._installation_id,
+                len(status_by_topic),
+            )
+        else:
+            _LOGGER.debug(
+                "IoT Open coordinator(%s): no topics to query (no exposed FunctionX with topic_read)",
+                self._installation_id,
+            )
+
+        # ------------------------------------------------------------------
+        # 3. Build IoTOpenFunctionState objects
+        # ------------------------------------------------------------------
         result: Dict[int, IoTOpenFunctionState] = {}
 
         for topic, func in function_by_topic.items():
@@ -165,14 +257,7 @@ class IoTOpenDataUpdateCoordinator(
             meta = func.get("meta") or {}
             status = status_by_topic.get(topic)
 
-            raw_dev_id = meta.get("device_id")
-            if raw_dev_id is None:
-                device_id: Optional[int] = None
-            else:
-                try:
-                    device_id = int(raw_dev_id)
-                except (TypeError, ValueError):
-                    device_id = None
+            device_id = _parse_device_id(meta.get("device_id"))
 
             result[func_id] = IoTOpenFunctionState(
                 function_id=func_id,
@@ -183,15 +268,15 @@ class IoTOpenDataUpdateCoordinator(
                 name=str(meta.get("name") or f"Function {func_id}"),
                 topic_read=topic,
                 last_value=None if status is None else status.get("value"),
-                last_timestamp=None if status is None else status.get(
-                    "timestamp"),
+                last_timestamp=None if status is None else status.get("timestamp"),
                 device_id=device_id,
                 meta=meta,
             )
 
         _LOGGER.debug(
-            "IoT Open coordinator: %d functions with status for installation %s",
-            len(result),
+            "IoT Open coordinator(%s): %d functions with status after filtering",
             self._installation_id,
+            len(result),
         )
+
         return result
