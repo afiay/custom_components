@@ -109,7 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         mqtt_username = entry.data.get(CONF_MQTT_USERNAME) or ""
         mqtt_password = entry.data.get(CONF_MQTT_PASSWORD) or None
 
-        # Try to derive prefix from username "box:2086" -> "2086"
+        # Try to derive prefix from username "box:<client_id>" -> "client_id"
         if ":" in mqtt_username:
             _, suffix = mqtt_username.split(":", 1)
             if suffix.isdigit():

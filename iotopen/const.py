@@ -24,7 +24,6 @@ CONF_MQTT_TLS: Final = "mqtt_tls"
 
 DEFAULT_MQTT_PORT: Final = 1883
 
-# We now have sensors, binary_sensors and switches.
 PLATFORMS: Final = ["sensor", "binary_sensor", "switch"]
 
 # ---------------------------------------------------------------------------

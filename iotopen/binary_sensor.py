@@ -61,7 +61,6 @@ async def async_setup_entry(
             entry.entry_id,
         )
 
-
 class IoTOpenFunctionBinarySensor(IoTOpenEntity, BinarySensorEntity):
     """Binary sensor representing an alarm-style FunctionX."""
 
